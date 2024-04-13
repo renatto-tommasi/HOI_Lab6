@@ -59,17 +59,23 @@ def kinematics(d, theta, a, alpha, Tb=np.eye(4)):
     # 1. Compute the DH transformation matrix.
     # 2. Compute the resulting accumulated transformation from the base frame.
     # 3. Append the computed transformation to T.
-    DoF = len(d)    # Number of Degrees of Freedom
-    A = []          # Initialize List
-    for i in range(DoF):
-        Ai = DH(d[i], theta[i], a[i], alpha[i]) # Compute transformation matrix (i-1)T(i)
-        A.append(Ai)
-        if len(A) == 1:       # Handle first iteration
-            Ti = Ai
-            T.append(Ti)
-        else: 
-            Ti = T[-1] @ Ai   # Example. (0)T(2) = (0)T(1) x (1)T(2)
-            T.append(Ti)
+    # DoF = len(d)    # Number of Degrees of Freedom
+    # A = []          # Initialize List
+    # for i in range(DoF):
+    #     Ai = DH(d[i], theta[i], a[i], alpha[i]) # Compute transformation matrix (i-1)T(i)
+    #     A.append(Ai)
+    #     if len(A) == 1:       # Handle first iteration
+    #         Ti = Ai
+    #         T.append(Ti)
+    #     else: 
+    #         Ti = T[-1] @ Ai   # Example. (0)T(2) = (0)T(1) x (1)T(2)
+    #         T.append(Ti)
+    # return T
+    for tz, rz, tx, rx in zip(d, theta, a, alpha):
+        matrix = DH(tz, rz, tx, rx)
+        T_from_base = T[-1]@matrix
+        T.append(T_from_base)
+        
     return T
 
 # Inverse kinematics

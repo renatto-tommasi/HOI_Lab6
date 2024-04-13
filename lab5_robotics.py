@@ -233,7 +233,7 @@ class Position2D(Task):
     def update(self, robot):
         dof = robot.getDOF()
         if self.link is None:
-            self.J = robot.getEEJacobian()[:2,:dof] # Update task Jacobian
+            self.J = robot.getEEJacobian()[:2,:] # Update task Jacobian
             self.err = self.getFFVel() + self.getK() @ (self.getDesired() - robot.getEETransform()[:2,3].reshape(2,1)) # Update task error
         else:
             self.J = robot.getLinkJacobian(self.link)[:2,:dof]     # Change the value to properly select the column of the joint

@@ -15,7 +15,7 @@ robot = MobileManipulator(d, theta, a, alpha, revolute)
 # Task definition
 
 tasks = [ 
-          Position2D("End-effector position", np.array([1.0, 0.5]).reshape(2,1))
+          Position2D("End-effector position", np.array([-0.5, 1.5]).reshape(2,1))
         ] 
 
 # Retrieve Position2D index from tasks list
