@@ -1,4 +1,4 @@
-from lab6_robotics_l import * # Includes numpy import
+from lab6_robotics import * # Includes numpy import
 import matplotlib.pyplot as plt
 import matplotlib.patches as patch
 import matplotlib.animation as anim
