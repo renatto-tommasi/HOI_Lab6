@@ -252,11 +252,12 @@ class Orientation2D(Task):
         self.link = link
 
     def update(self, robot):
+        dof = robot.getDOF()
         if self.link is None:
-            self.J = robot.getEEJacobian()[-1,:].reshape(1,3)  # Update task Jacobian
+            self.J = robot.getEEJacobian()[-1,:].reshape(1,dof)  # Update task Jacobian
             T = robot.getEETransform()
         else:
-            self.J = robot.getLinkJacobian(self.link)[-1,:].reshape(1,3)
+            self.J = robot.getLinkJacobian(self.link)[-1,:].reshape(1,dof)
             T = robot.getLinkTransform(self.link)
         
         cos_theta_n = T[0,0]

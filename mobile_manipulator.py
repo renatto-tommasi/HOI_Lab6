@@ -15,7 +15,8 @@ robot = MobileManipulator(d, theta, a, alpha, revolute)
 # Task definition
 
 tasks = [ 
-          Position2D("End-effector position", np.array([-0.5, 1.5]).reshape(2,1))
+          # Position2D("End-effector position", np.array([-0.5, 1.5]).reshape(2,1))
+          Configuration2D("End-effector Configuration", np.array([-0.5,1.5,0,1,1,1]).reshape(6,1))
         ] 
 
 # Retrieve Position2D index from tasks list
@@ -60,8 +61,8 @@ def init():
     range = (-1.0, 1.0)     # Range for x and y to generate random point
     if i != 1:              # If we are not in the first loop enter
         if isinstance(tasks[pose2d_idx], Configuration2D):  # If task is Configuration2D class, change only the desired target of the end-effector position
-            orie_d = tasks[pose2d_idx].getDesired()[2]      # Get the desired target for orientation part
-            tasks[pose2d_idx].setDesired(np.array([np.random.uniform(*range), np.random.uniform(*range), orie_d]))  # Generate random point inside range and set it as new desired 
+            # orie_d = tasks[pose2d_idx].getDesired()[2]      # Get the desired target for orientation part
+            tasks[pose2d_idx].setDesired(np.array([np.random.uniform(*range), np.random.uniform(*range),0, np.random.uniform(2*np.pi), np.random.uniform(2*np.pi),np.random.uniform(2*np.pi)]))  # Generate random point inside range and set it as new desired 
         else:
             # If task is Position2D change desired
             tasks[pose2d_idx].setDesired(np.array([[np.random.uniform(*range)], [np.random.uniform(*range)]]))  # Random desired end-effector position
@@ -116,7 +117,7 @@ def simulate(t):
             Ji_bar = task.getJacobian() @ Pi_1  # Compute augmented Jacobian
             
             # Inverse Jacobians (DLS and pseudoinverse)
-            Ji_bar_DLS = DLS(Ji_bar, 0.1)   # W=np.array([[1,0,0], [0,1,0], [0,0,1]])
+            Ji_bar_DLS = DLS(Ji_bar, 0.1, np.diag([0.00001, 0.000001, 1, 1, 1]))   # W=np.array([[1,0,0], [0,1,0], [0,0,1]])
             Ji_bar_pinv = np.linalg.pinv(Ji_bar)
 
             dq = dqi_1 + (Ji_bar_DLS @ (task.active * task.getError() - (task.getJacobian() @ dqi_1)))  # Accumulate velocity
