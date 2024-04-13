@@ -117,7 +117,7 @@ def simulate(t):
             Ji_bar = task.getJacobian() @ Pi_1  # Compute augmented Jacobian
             
             # Inverse Jacobians (DLS and pseudoinverse)
-            Ji_bar_DLS = DLS(Ji_bar, 0.1, np.diag([0.00001, 0.000001, 1, 1, 1]))   # W=np.array([[1,0,0], [0,1,0], [0,0,1]])
+            Ji_bar_DLS = DLS(Ji_bar, 0.1, np.diag([0.5, 0.1, 1, 1, 1]))   # W=np.array([[1,0,0], [0,1,0], [0,0,1]])
             Ji_bar_pinv = np.linalg.pinv(Ji_bar)
 
             dq = dqi_1 + (Ji_bar_DLS @ (task.active * task.getError() - (task.getJacobian() @ dqi_1)))  # Accumulate velocity

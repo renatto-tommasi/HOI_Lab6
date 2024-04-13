@@ -122,9 +122,11 @@ def DLS(A, damping, W=None):
     '''
     if W is None:
         W = np.eye(A.shape[1])
-    W_inv = np.linalg.inv(W)
-    A_inv = W_inv @ A.T @ np.linalg.inv(A @ W_inv @ A.T + damping**2 * np.eye(A.shape[0]))
-    return A_inv # Implement the formula to compute the DLS of matrix A.
+    # W_inv = np.linalg.inv(W)
+    # A_inv = W_inv @ A.T @ np.linalg.inv(A @ W_inv @ A.T + damping**2 * np.eye(A.shape[0]))
+    Jw = A @ W
+    J_pinv = W @ np.linalg.inv(A.T @ Jw + damping**2 * np.eye(A.shape[1])) @ A.T
+    return J_pinv # Implement the formula to compute the DLS of matrix A.
 
 # Extract characteristic points of a robot projected on X-Y plane
 def robotPoints2D(T):
