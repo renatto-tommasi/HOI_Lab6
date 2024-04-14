@@ -17,7 +17,7 @@ robot = MobileManipulator(d, theta, a, alpha, revolute)
 tasks = [ 
         #   JointLimit("Joint Limit", desired=None, joint=3, qmin=-np.pi/8, qmax=np.pi/8, thresholds=np.array([np.pi/36, np.pi/72])),
         #   Position2D("End-effector position", np.array([-0.5, 1.5]).reshape(2,1))
-          Configuration2D("End-effector Configuration", np.array([-1, -1.0, 0]))
+          Configuration2D("End-effector Configuration", np.array([-1, 0, 0]))
         ] 
 
 # Retrieve Position2D index from tasks list
@@ -36,6 +36,8 @@ tt = np.arange(0, Tt, dt) # Simulation time vector
 errors = {} # To store errors
 i = 1 # Counter to know how many loops of the simulation we did
 vel_evo = None # Array to store the evolution of velocity output
+eta_evo = None  # Array to store mobile base position
+EE_evo = None   # Array to store end-effector position
 
 # Drawing preparation
 fig = plt.figure()
@@ -97,6 +99,15 @@ def vel_evolution(vectors, time):
     # Show the plot
     plt.show()
 
+def pose_evolution(eta, EE):
+    plt.plot(eta[0,:], eta[1,:], label='Base position')
+    plt.plot(EE[0,:], EE[1,:], label='EE Position')
+    plt.xlabel('X')
+    plt.ylabel('Y')
+    plt.title('Evolution')
+    plt.legend()
+    plt.grid()
+    plt.show()
 
 # Store Error
 def store_error(task, errors):
@@ -138,10 +149,25 @@ def store_vel(dq, vel_evo):
         vel_evo = np.concatenate((vel_evo, dq), axis=1)
     return vel_evo
 
-POINTS = [[-1.5,1.5],
-          [-1,0],
-          [1,-0.5],
-          [-1,-1]]
+def store_pose(robot, eta_evo, EE_evo):
+    eta = robot.getBasePose()[:2,0].reshape(2,1)
+    EE = robot.getEETransform()[:2,3].reshape(2,1)
+    if eta_evo is None:
+        eta_evo = eta
+    else:
+        eta_evo = np.concatenate((eta_evo, eta), axis=1)
+    
+    if EE_evo is None:
+        EE_evo = EE
+    else:
+        EE_evo = np.concatenate((EE_evo, EE), axis=1)
+    
+    return eta_evo, EE_evo
+
+POINTS = [[-1,-1],
+          [1.5,-1],
+          [1.5,0],
+          [-1,0]]
 COUNTER = 0
 
 # Simulation initialization
@@ -176,7 +202,7 @@ def simulate(t):
     global robot
     global PPx, PPy
     global errors, i
-    global vel_evo
+    global vel_evo, eta_evo, EE_evo
     
     ### Recursive Task-Priority algorithm (w/set-based tasks)
     # The algorithm works in the same way as in Lab4. 
@@ -199,10 +225,7 @@ def simulate(t):
     for task in tasks:
         # Update task state
         task.update(robot)  
-
-
-
-
+        eta_evo, EE_evo = store_pose(robot, eta_evo, EE_evo)
         errors = store_error(task, errors)
 
         if task.active != 0:
@@ -230,7 +253,7 @@ def simulate(t):
     vel_evo = store_vel(dq, vel_evo)
 
     # Update robot
-    robot.update(dq, dt, "RT")
+    robot.update(dq, dt, "R")
     
     # Update drawing
     # -- Manipulator links
@@ -260,3 +283,4 @@ size_errors = list(errors.values())[0].shape[0]     # Get the size of the first 
 size_vel_evo = vel_evo.shape[1]
 plot_error(errors, new_tt[0:size_errors], tasks)
 vel_evolution(vel_evo, new_tt[0:size_vel_evo])
+pose_evolution(eta_evo, EE_evo)
