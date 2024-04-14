@@ -194,10 +194,10 @@ def simulate(t):
         err_yaw = wrap_angle(err_yaw)
 
         rot_for = [True, False]         # Rotate First, Forward First
-        if distance > 1.5:
-            print("Going To Goal")
-            dq[:2] = move_to_goal(rot_for, distance, np.abs(err_yaw[0]))
-            break 
+        # if distance > 1.5:
+        #     print("Going To Goal")
+        #     dq[:2] = move_to_goal(rot_for, distance, np.abs(err_yaw[0]))
+        #     break 
 
 
 
