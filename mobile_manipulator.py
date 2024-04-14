@@ -15,8 +15,9 @@ robot = MobileManipulator(d, theta, a, alpha, revolute)
 # Task definition
 
 tasks = [ 
-          # Position2D("End-effector position", np.array([-0.5, 1.5]).reshape(2,1))
-          Configuration2D("End-effector Configuration", np.array([-0.5,1.5,0,1,1,1]).reshape(6,1))
+        #   JointLimit("Joint Limit", desired=None, joint=3, qmin=-np.pi/8, qmax=np.pi/8, thresholds=np.array([np.pi/36, np.pi/72])),
+        #   Position2D("End-effector position", np.array([-0.5, 1.5]).reshape(2,1))
+          Configuration2D("End-effector Configuration", np.array([0.0, 0.5, np.pi/2]))
         ] 
 
 # Retrieve Position2D index from tasks list
@@ -28,10 +29,13 @@ for idx, task in enumerate(tasks):
 
 # Simulation params
 dt = 1.0/60.0
+Tt = 10 # Total simulation time
+tt = np.arange(0, Tt, dt) # Simulation time vector
 
 # My initialization
 errors = {} # To store errors
 i = 1 # Counter to know how many loops of the simulation we did
+vel_evo = None # Array to store the evolution of velocity output
 
 # Drawing preparation
 fig = plt.figure()
@@ -49,6 +53,91 @@ point, = ax.plot([], [], 'rx') # Target
 PPx = []
 PPy = []
 
+# Plot Error
+def plot_error(errors, time, tasks):
+    for key, value in errors.items():
+        plt.plot(time, value, label=f'({key})')
+    
+    # Find if there is a JointLimit task
+    for task in tasks:
+        if isinstance(task, JointLimit):
+            # Draw dotted lines
+            qmin = task.qmin
+            qmax = task.qmax
+            plt.axhline(y=qmin, color='r', linestyle='--')
+            plt.axhline(y=qmax, color='r', linestyle='--')
+
+    # Labels and legend
+    plt.xlabel('Time[s]')
+    plt.ylabel('Value[1]')
+    plt.title(f'Task-Priority control ({len(errors)} tasks)')
+    plt.legend()
+    plt.grid()
+    plt.xlim(left=time[0])
+
+    # Display the plot
+    plt.show()
+
+# Plot evolution of velocity output
+def vel_evolution(vectors, time):
+    # Plot all vectors against time
+    plt.plot(time, vectors[0,:], label='Velocity joint 1')
+    plt.plot(time, vectors[1,:], label='Velocity joint 2')
+    plt.plot(time, vectors[2,:], label='Velocity joint 3')
+    plt.plot(time, vectors[3,:], label='Velocity joint 4')
+    plt.plot(time, vectors[4,:], label='Velocity joint 5')
+
+    # Add labels and legend
+    plt.xlabel('Time[s]')
+    plt.ylabel('Value[1]')
+    plt.title('Evolution of Velocity Output from TP Algorithm')
+    plt.legend()
+    plt.grid()
+
+    # Show the plot
+    plt.show()
+
+
+# Store Error
+def store_error(task, errors):
+    # Identify dimension of error
+    if isinstance(task, JointPosition):
+        err = abs(task.getError().item())
+    elif isinstance(task, JointLimit):
+        err = robot.getJointPos(task.joint)
+    elif isinstance(task, Configuration2D):
+        err_p = np.linalg.norm(task.getError()[:2, 0])
+        err_o = task.getError()[2, 0]
+    else:
+        err = np.linalg.norm(task.getError())
+
+    # Store error in correct dictionary
+    if isinstance(task, Configuration2D):
+        if task.name + "_position" not in errors:
+            errors[task.name + "_position"] = np.array([err_p])
+        else:
+            errors[task.name + "_position"] = np.concatenate((errors[task.name + "_position"], np.array([err_p])))
+
+        if task.name + "_orientation" not in errors:
+            errors[task.name + "_orientation"] = np.array([err_o])
+        else:
+            errors[task.name + "_orientation"] = np.concatenate((errors[task.name + "_orientation"], np.array([err_o])))
+    else:
+        if task.name not in errors:
+            # Handle first iteration
+            errors[task.name] = np.array([err])
+        else:
+            # Concatenate error based on the current task
+            errors[task.name] = np.concatenate((errors[task.name], np.array([err])))
+    return errors
+
+def store_vel(dq, vel_evo):
+    if vel_evo is None:
+        vel_evo = dq
+    else:
+        vel_evo = np.concatenate((vel_evo, dq), axis=1)
+    return vel_evo
+
 # Simulation initialization
 def init():
     global tasks
@@ -58,11 +147,11 @@ def init():
     line.set_data([], [])
     path.set_data([], [])
     point.set_data([], [])
-    range = (-1.0, 1.0)     # Range for x and y to generate random point
+    range = (-1.5, 1.5)     # Range for x and y to generate random point
     if i != 1:              # If we are not in the first loop enter
         if isinstance(tasks[pose2d_idx], Configuration2D):  # If task is Configuration2D class, change only the desired target of the end-effector position
-            # orie_d = tasks[pose2d_idx].getDesired()[2]      # Get the desired target for orientation part
-            tasks[pose2d_idx].setDesired(np.array([np.random.uniform(*range), np.random.uniform(*range),0, np.random.uniform(2*np.pi), np.random.uniform(2*np.pi),np.random.uniform(2*np.pi)]))  # Generate random point inside range and set it as new desired 
+            orie_d = tasks[pose2d_idx].getDesired()[2]      # Get the desired target for orientation part
+            tasks[pose2d_idx].setDesired(np.array([np.random.uniform(*range), np.random.uniform(*range), orie_d]))  # Generate random point inside range and set it as new desired 
         else:
             # If task is Position2D change desired
             tasks[pose2d_idx].setDesired(np.array([[np.random.uniform(*range)], [np.random.uniform(*range)]]))  # Random desired end-effector position
@@ -74,6 +163,7 @@ def simulate(t):
     global robot
     global PPx, PPy
     global errors, i
+    global vel_evo
     
     ### Recursive Task-Priority algorithm (w/set-based tasks)
     # The algorithm works in the same way as in Lab4. 
@@ -97,21 +187,7 @@ def simulate(t):
         # Update task state
         task.update(robot)
 
-        # Identify dimension of error
-        if isinstance(task,JointPosition) is True:
-            err = abs(task.getError().item())
-        elif isinstance(task,JointLimit) is True:
-            err = robot.getJointPos(task.joint)
-        else:
-            err = np.linalg.norm(task.getError())
-
-        # Store error in correct dictionary
-        if task.name not in errors:
-            # Handle first iteration
-            errors[task.name] = np.array([err])
-        else:
-            # Concatenate error based on the current task 
-            errors[task.name] = np.concatenate((errors[task.name], np.array([err])))
+        errors = store_error(task, errors)
 
         if task.active != 0:
             Ji_bar = task.getJacobian() @ Pi_1  # Compute augmented Jacobian
@@ -125,10 +201,12 @@ def simulate(t):
         else:
             dq = dqi_1
             Pi = Pi_1
-
+        
         Pi_1 = Pi
         dqi_1 = dq
     ###
+
+    vel_evo = store_vel(dq, vel_evo)
 
     # Update robot
     robot.update(dq, dt)
@@ -140,7 +218,7 @@ def simulate(t):
     PPx.append(PP[0,-1])
     PPy.append(PP[1,-1])
     path.set_data(PPx, PPy)
-    point.set_data(tasks[0].getDesired()[0], tasks[0].getDesired()[1])
+    point.set_data(tasks[pose2d_idx].getDesired()[0], tasks[pose2d_idx].getDesired()[1])
     # -- Mobile base
     eta = robot.getBasePose()
     veh.set_transform(trans.Affine2D().rotate(eta[2,0]) + trans.Affine2D().translate(eta[0,0], eta[1,0]) + ax.transData)
@@ -148,6 +226,16 @@ def simulate(t):
     return line, veh, path, point
 
 # Run simulation
-animation = anim.FuncAnimation(fig, simulate, np.arange(0, 10, dt), 
+animation = anim.FuncAnimation(fig, simulate, tt, 
                                 interval=10, blit=True, init_func=init, repeat=True)
 plt.show()
+
+new_tt = tt
+for j in range(1,i):
+    temp = np.arange(new_tt[-1], 10 * (j+1), dt)
+    new_tt = np.concatenate((new_tt,temp))
+
+size_errors = list(errors.values())[0].shape[0]     # Get the size of the first element of the dictionary no matter what key does it have
+size_vel_evo = vel_evo.shape[1]
+plot_error(errors, new_tt[0:size_errors], tasks)
+vel_evolution(vel_evo, new_tt[0:size_vel_evo])
