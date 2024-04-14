@@ -360,7 +360,7 @@ class JointLimit(Task):
     '''
     def __init__(self, name, desired, joint, qmin, qmax, thresholds):
         super().__init__(name, desired)
-        self.J = np.zeros((1,3))    # Initialize with proper dimensions
+        self.J = np.zeros((1,5))    # Initialize with proper dimensions
         self.err = 0
         self.joint = joint - 1      # Selected joint 
         self.qmin = qmin
