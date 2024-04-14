@@ -138,10 +138,10 @@ def store_vel(dq, vel_evo):
         vel_evo = np.concatenate((vel_evo, dq), axis=1)
     return vel_evo
 
-POINTS = [[-4.5,4.5],
-          [-3,2],
-          [3,-2],
-          [-4,-2]]
+POINTS = [[-1.5,1.5],
+          [-1,0],
+          [1,-0.5],
+          [-1,-1]]
 COUNTER = 0
 
 # Simulation initialization
@@ -157,14 +157,14 @@ def init():
     if i != 1:              # If we are not in the first loop enter
         if isinstance(tasks[pose2d_idx], Configuration2D):  # If task is Configuration2D class, change only the desired target of the end-effector position
             orie_d = tasks[pose2d_idx].getDesired()[2]      # Get the desired target for orientation part
-            tasks[pose2d_idx].setDesired(np.array([np.random.uniform(*range), np.random.uniform(*range), orie_d]))  # Generate random point inside range and set it as new desired 
-            # newPoint = POINTS[COUNTER].copy()
-            # newPoint.append(orie_d)
-            # newConfig = np.array(newPoint)
-            # tasks[pose2d_idx].setDesired(newConfig)
-            # COUNTER += 1
-            # if COUNTER == 4:
-            #     COUNTER = 0
+            # tasks[pose2d_idx].setDesired(np.array([np.random.uniform(*range), np.random.uniform(*range), orie_d]))  # Generate random point inside range and set it as new desired 
+            newPoint = POINTS[COUNTER].copy()
+            newPoint.append(orie_d)
+            newConfig = np.array(newPoint)
+            tasks[pose2d_idx].setDesired(newConfig)
+            COUNTER += 1
+            if COUNTER == 4:
+                COUNTER = 0
         else:
             # If task is Position2D change desired
             tasks[pose2d_idx].setDesired(np.array([[np.random.uniform(*range)], [np.random.uniform(*range)]]))  # Random desired end-effector position
@@ -230,7 +230,7 @@ def simulate(t):
     vel_evo = store_vel(dq, vel_evo)
 
     # Update robot
-    robot.update(dq, dt)
+    robot.update(dq, dt, "RT")
     
     # Update drawing
     # -- Manipulator links

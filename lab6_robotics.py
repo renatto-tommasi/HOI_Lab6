@@ -45,7 +45,7 @@ class MobileManipulator:
         dt (double): sampling time
     """
 
-    def update(self, dQ, dt):
+    def update(self, dQ, dt, priority="R"):
         # Update manipulator
         self.q += dQ[2:, 0].reshape(-1, 1) * dt
         for i in range(len(self.revolute)):
@@ -54,14 +54,33 @@ class MobileManipulator:
             else:
                 self.d[i] = self.q[i]
 
-        # Update mobile base pose
-        forward_vel = dQ[1, 0]
-        angular_vel = dQ[0, 0]
-        yaw = self.eta[2, 0]
+        # Update Displacement
+        d = dQ[1, 0]*dt
+        theta = dQ[0, 0]*dt
 
-        self.eta += dt * np.array(
-            [forward_vel * np.cos(yaw), forward_vel * np.sin(yaw), angular_vel]
-        ).reshape(3, 1)
+        x_1 = self.eta[0, 0]
+        y_1 = self.eta[1, 0]
+        yaw_1 = self.eta[2, 0]
+        if priority == "R":
+            self.eta[2,0] = yaw_1 + theta
+            self.eta[0,0] = x_1 + d*np.cos(self.eta[2,0])
+            self.eta[1,0] = y_1 + d*np.sin(self.eta[2,0])
+
+        elif priority == "T":
+            self.eta[0,0] = x_1 + d*np.cos(self.eta[2,0])
+            self.eta[1,0] = y_1 + d*np.sin(self.eta[2,0])
+            self.eta[2,0] = yaw_1 + theta
+
+        elif priority == "RT":
+            arc_radius = dQ[1,0]/dQ[0,0]
+
+            self.eta[0,0] = x_1 + arc_radius*(np.sin(yaw_1 + theta)-np.sin(yaw_1))
+            self.eta[1,0] = y_1 + arc_radius*(-np.cos(yaw_1 + theta)+np.cos(yaw_1))
+            self.eta[2,0] = yaw_1 + theta
+
+
+
+        
 
         # Base kinematics
         x, y, yaw = self.eta.flatten()
