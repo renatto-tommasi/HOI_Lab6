@@ -17,7 +17,7 @@ robot = MobileManipulator(d, theta, a, alpha, revolute)
 tasks = [ 
         #   JointLimit("Joint Limit", desired=None, joint=3, qmin=-np.pi/8, qmax=np.pi/8, thresholds=np.array([np.pi/36, np.pi/72])),
         #   Position2D("End-effector position", np.array([-0.5, 1.5]).reshape(2,1))
-          Configuration2D("End-effector Configuration", np.array([-1, -1.0, 0]))
+            Configuration2D("End-effector Configuration", np.array([-1, -1.0, 0]))
         ] 
 
 # Retrieve Position2D index from tasks list
@@ -199,11 +199,23 @@ def simulate(t):
     for task in tasks:
         # Update task state
         task.update(robot)  
-
-
-
-
         errors = store_error(task, errors)
+
+        err_x=task.getDesired()[0]-robot.getBasePose()[0]
+        err_y=task.getDesired()[1]-robot.getBasePose()[1]
+        err_yaw=robot.getBasePose()[2]-np.arctan2(err_y,err_x)
+        distance=np.linalg.norm(err_x-err_y)
+
+        err_yaw = wrap_angle(err_yaw)
+
+        rot_for = [True, False]         # Rotate First, Forward First
+        if distance > 3 and not rot_for[0] and rot_for[1]:
+            print("Going To Goal")
+            dq[:2] = move_to_goal([True, False], distance, err_yaw[0])
+            break 
+        elif distance > 1:
+            dq[:2] = move_to_goal(rot_for, distance, err_yaw[0])
+            break
 
         if task.active != 0:
             print("Doing Task")
@@ -211,7 +223,7 @@ def simulate(t):
             
             # Inverse Jacobians (DLS and pseudoinverse)
 
-            W = np.diag([0.5, 0.1, 1, 1, 1])
+            W = np.diag([1, 1, 0.3, 0.3, 0.3])
 
             Ji_bar_DLS = DLS(Ji_bar, 0.1, W)   # W=np.array([[1,0,0], [0,1,0], [0,0,1]])
         

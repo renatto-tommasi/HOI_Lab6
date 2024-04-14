@@ -2,6 +2,9 @@ from lab5_robotics import *
 
 deg90 = np.pi / 2
 
+def wrap_angle(angle):
+    return (angle + ( 2.0 * np.pi * np.floor( ( np.pi - angle ) / ( 2.0 * np.pi ) ) ) )
+
 
 class MobileManipulator:
     """
@@ -53,30 +56,39 @@ class MobileManipulator:
                 self.theta[i] = self.q[i]
             else:
                 self.d[i] = self.q[i]
+        # Exercise 1 and 2:
+        forward_vel = dQ[1, 0]
+        angular_vel = dQ[0, 0]
+        yaw = self.eta[2, 0]
+        self.eta += dt * np.array(
+            [forward_vel * np.cos(yaw), forward_vel * np.sin(yaw), angular_vel]
+        ).reshape(3, 1)
 
-        # Update Displacement
-        d = dQ[1, 0]*dt
-        theta = dQ[0, 0]*dt
+        # # Mods for Exercise 3
 
-        x_1 = self.eta[0, 0]
-        y_1 = self.eta[1, 0]
-        yaw_1 = self.eta[2, 0]
-        if priority == "R":
-            self.eta[2,0] = yaw_1 + theta
-            self.eta[0,0] = x_1 + d*np.cos(self.eta[2,0])
-            self.eta[1,0] = y_1 + d*np.sin(self.eta[2,0])
+        # # Update Displacement
+        # d = dQ[1, 0]*dt
+        # theta = dQ[0, 0]*dt
 
-        elif priority == "T":
-            self.eta[0,0] = x_1 + d*np.cos(self.eta[2,0])
-            self.eta[1,0] = y_1 + d*np.sin(self.eta[2,0])
-            self.eta[2,0] = yaw_1 + theta
+        # x_1 = self.eta[0, 0]
+        # y_1 = self.eta[1, 0]
+        # yaw_1 = self.eta[2, 0]
+        # if priority == "R":
+        #     self.eta[2,0] = yaw_1 + theta
+        #     self.eta[0,0] = x_1 + d*np.cos(self.eta[2,0])
+        #     self.eta[1,0] = y_1 + d*np.sin(self.eta[2,0])
 
-        elif priority == "RT":
-            arc_radius = dQ[1,0]/dQ[0,0]
+        # elif priority == "T":
+        #     self.eta[0,0] = x_1 + d*np.cos(self.eta[2,0])
+        #     self.eta[1,0] = y_1 + d*np.sin(self.eta[2,0])
+        #     self.eta[2,0] = yaw_1 + theta
 
-            self.eta[0,0] = x_1 + arc_radius*(np.sin(yaw_1 + theta)-np.sin(yaw_1))
-            self.eta[1,0] = y_1 + arc_radius*(-np.cos(yaw_1 + theta)+np.cos(yaw_1))
-            self.eta[2,0] = yaw_1 + theta
+        # elif priority == "RT":
+        #     arc_radius = dQ[1,0]/dQ[0,0]
+
+        #     self.eta[0,0] = x_1 + arc_radius*(np.sin(yaw_1 + theta)-np.sin(yaw_1))
+        #     self.eta[1,0] = y_1 + arc_radius*(-np.cos(yaw_1 + theta)+np.cos(yaw_1))
+        #     self.eta[2,0] = yaw_1 + theta
 
 
 
@@ -172,5 +184,21 @@ def rotation_z(yaw):
                      [0,0,1,0],
                      [0,0,0,1]])
 
+def move_to_goal(rot_for, distance, err_yaw):
+    v = 0
+    w = 0
+    Kv = 0.4
+    Kw = 0.9
+    abs_err_yaw = np.abs(err_yaw)
+    if rot_for[0] and abs_err_yaw > 0.1:
+        w = Kw * abs_err_yaw
+        if err_yaw > 0:
+            w = -w
 
+
+    if rot_for[1] or abs_err_yaw < 0.1:
+        v = Kv * distance
+
+
+    return np.array([w ,v]).reshape(-1,1)
              
