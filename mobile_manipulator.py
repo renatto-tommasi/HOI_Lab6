@@ -36,6 +36,9 @@ tt = np.arange(0, Tt, dt) # Simulation time vector
 errors = {} # To store errors
 i = 1 # Counter to know how many loops of the simulation we did
 vel_evo = None # Array to store the evolution of velocity output
+eta_evo = {}  # Dic to store mobile base position
+EE_evo = {}   # Dic to store end-effector position
+priority_flag = False
 
 # Drawing preparation
 fig = plt.figure()
@@ -97,6 +100,23 @@ def vel_evolution(vectors, time):
     # Show the plot
     plt.show()
 
+def pose_evolution(eta, EE):
+    for key, value in eta.items():
+        plt.plot(value[0,:], value[1,:], label=f'({key}), Base Position')
+
+    for key, value in EE.items():
+        plt.plot(value[0,:], value[1,:], label=f'({key}), EE Position')
+
+    # Labels and legend
+    plt.xlabel('Time[s]')
+    plt.ylabel('Value[1]')
+    plt.title(f'Task-Priority control ({len(errors)} tasks)')
+    plt.legend()
+    plt.grid()
+    # plt.xlim(left=time[0])
+
+    # Display the plot
+    plt.show()
 
 # Store Error
 def store_error(task, errors):
@@ -138,10 +158,30 @@ def store_vel(dq, vel_evo):
         vel_evo = np.concatenate((vel_evo, dq), axis=1)
     return vel_evo
 
-POINTS = [[-1.5,1.5],
-          [-1,0],
-          [1,-0.5],
-          [-1,-1]]
+def store_pose(robot, eta_evo, EE_evo):
+    eta = robot.getBasePose()[:2,0].reshape(2,1)
+    EE = robot.getEETransform()[:2,3].reshape(2,1)
+    
+    if robot.priority not in eta_evo:
+        # Handle first iteration
+        eta_evo[robot.priority] = eta
+    else:
+        # Concatenate error based on the current task
+        eta_evo[robot.priority] = np.concatenate((eta_evo[robot.priority], eta), axis=1)
+
+    if robot.priority not in EE_evo:
+        # Handle first iteration
+        EE_evo[robot.priority] = EE
+    else:
+        # Concatenate error based on the current task
+        EE_evo[robot.priority] = np.concatenate((EE_evo[robot.priority], EE), axis=1)
+    
+    return eta_evo, EE_evo
+
+POINTS = [[-1,-1],
+          [1.5,-1],
+          [1.5,0],
+          [-1,0]]
 COUNTER = 0
 
 # Simulation initialization
@@ -176,16 +216,28 @@ def simulate(t):
     global robot
     global PPx, PPy
     global errors, i
-    global vel_evo
+    global vel_evo, eta_evo, EE_evo
+    global priority_flag
     
     ### Recursive Task-Priority algorithm (w/set-based tasks)
     # The algorithm works in the same way as in Lab4. 
     # The only difference is that it checks if a task is active.
     
-    print("t: ", round(t, 2))
+    print("t: ", round(t, 2), "  |  ",i)
     if t == 9.9:
         i = i + 1
 
+    if i == 3 and robot.priority == "R":
+        print("T")
+        robot.priority = "T"
+    elif i == 4 and robot.priority == "T":
+        print("RT")
+        robot.priority = "RT"
+    elif i == 5 and robot.priority == "RT":
+        print("R")
+        robot.priority = "R"
+    
+    
     # Initialize null-space projector
     Pi_1 = np.eye(robot.getDOF())
 
@@ -199,6 +251,7 @@ def simulate(t):
     for task in tasks:
         # Update task state
         task.update(robot)  
+        eta_evo, EE_evo = store_pose(robot, eta_evo, EE_evo)
         errors = store_error(task, errors)
 
         err_x=task.getDesired()[0]-robot.getBasePose()[0]
@@ -218,7 +271,7 @@ def simulate(t):
             break
 
         if task.active != 0:
-            print("Doing Task")
+            # print("Doing Task")
             Ji_bar = task.getJacobian() @ Pi_1  # Compute augmented Jacobian
             
             # Inverse Jacobians (DLS and pseudoinverse)
@@ -242,7 +295,7 @@ def simulate(t):
     vel_evo = store_vel(dq, vel_evo)
 
     # Update robot
-    robot.update(dq, dt, "RT")
+    robot.update(dq, dt)
     
     # Update drawing
     # -- Manipulator links
@@ -272,3 +325,4 @@ size_errors = list(errors.values())[0].shape[0]     # Get the size of the first 
 size_vel_evo = vel_evo.shape[1]
 plot_error(errors, new_tt[0:size_errors], tasks)
 vel_evolution(vel_evo, new_tt[0:size_vel_evo])
+pose_evolution(eta_evo, EE_evo)

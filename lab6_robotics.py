@@ -18,12 +18,13 @@ class MobileManipulator:
     revolute (list of Bool): list of flags specifying if the corresponding joint is a revolute joint
     """
 
-    def __init__(self, d, theta, a, alpha, revolute):
+    def __init__(self, d, theta, a, alpha, revolute, priority="R"):
         self.d = d
         self.theta = theta
         self.a = a
         self.alpha = alpha
         self.revolute = revolute
+        self.priority = priority
 
         # List of joint types extended with base joints
         self.revoluteExt = [True, False] + self.revolute
@@ -48,7 +49,7 @@ class MobileManipulator:
         dt (double): sampling time
     """
 
-    def update(self, dQ, dt, priority="R"):
+    def update(self, dQ, dt):
         # Update manipulator
         self.q += dQ[2:, 0].reshape(-1, 1) * dt
         for i in range(len(self.revolute)):
