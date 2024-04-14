@@ -160,7 +160,7 @@ def wrap_angle(angle):
 def move_to_goal(rot_for, distance, err_yaw):
     v = 0
     w = 0
-    Kv = 0.3
+    Kv = 0.5
     Kw = 0.8
     if rot_for[0] and err_yaw > 0.1:
         w = Kw * err_yaw
