@@ -17,7 +17,7 @@ robot = MobileManipulator(d, theta, a, alpha, revolute)
 tasks = [ 
         #   JointLimit("Joint Limit", desired=None, joint=3, qmin=-np.pi/8, qmax=np.pi/8, thresholds=np.array([np.pi/36, np.pi/72])),
         #   Position2D("End-effector position", np.array([-0.5, 1.5]).reshape(2,1))
-          Configuration2D("End-effector Configuration", np.array([-4, -2.0, 0]))
+          Configuration2D("End-effector Configuration", np.array([-1, -1.0, 0]))
         ] 
 
 # Retrieve Position2D index from tasks list
@@ -39,7 +39,7 @@ vel_evo = None # Array to store the evolution of velocity output
 
 # Drawing preparation
 fig = plt.figure()
-ax = fig.add_subplot(111, autoscale_on=False, xlim=(-5, 5), ylim=(-5,5))
+ax = fig.add_subplot(111, autoscale_on=False, xlim=(-3, 3), ylim=(-3,3))
 ax.set_title('Simulation')
 ax.set_aspect('equal')
 ax.grid()
@@ -153,18 +153,18 @@ def init():
     line.set_data([], [])
     path.set_data([], [])
     point.set_data([], [])
-    range = (-4, 4)     # Range for x and y to generate random point
+    range = (-2, 2)     # Range for x and y to generate random point
     if i != 1:              # If we are not in the first loop enter
         if isinstance(tasks[pose2d_idx], Configuration2D):  # If task is Configuration2D class, change only the desired target of the end-effector position
             orie_d = tasks[pose2d_idx].getDesired()[2]      # Get the desired target for orientation part
-            # tasks[pose2d_idx].setDesired(np.array([np.random.uniform(*range), np.random.uniform(*range), orie_d]))  # Generate random point inside range and set it as new desired 
-            newPoint = POINTS[COUNTER].copy()
-            newPoint.append(orie_d)
-            newConfig = np.array(newPoint)
-            tasks[pose2d_idx].setDesired(newConfig)
-            COUNTER += 1
-            if COUNTER == 4:
-                COUNTER = 0
+            tasks[pose2d_idx].setDesired(np.array([np.random.uniform(*range), np.random.uniform(*range), orie_d]))  # Generate random point inside range and set it as new desired 
+            # newPoint = POINTS[COUNTER].copy()
+            # newPoint.append(orie_d)
+            # newConfig = np.array(newPoint)
+            # tasks[pose2d_idx].setDesired(newConfig)
+            # COUNTER += 1
+            # if COUNTER == 4:
+            #     COUNTER = 0
         else:
             # If task is Position2D change desired
             tasks[pose2d_idx].setDesired(np.array([[np.random.uniform(*range)], [np.random.uniform(*range)]]))  # Random desired end-effector position
@@ -199,21 +199,7 @@ def simulate(t):
     for task in tasks:
         # Update task state
         task.update(robot)  
-        err_x=task.getDesired()[0]-robot.getBasePose()[0]
-        err_y=task.getDesired()[1]-robot.getBasePose()[1]
-        err_yaw=robot.getBasePose()[2]-np.arctan2(err_y,err_x)
-        distance=np.linalg.norm(err_x-err_y)
 
-        err_yaw = wrap_angle(err_yaw)
-
-        rot_for = [True, True]         # Rotate First, Forward First
-        if distance > 3 and not rot_for[0] and rot_for[1]:
-            print("Going To Goal")
-            dq[:2] = move_to_goal([True, False], distance, err_yaw[0])
-            break 
-        elif distance > 1:
-            dq[:2] = move_to_goal(rot_for, distance, err_yaw[0])
-            break
 
 
 
@@ -225,7 +211,7 @@ def simulate(t):
             
             # Inverse Jacobians (DLS and pseudoinverse)
 
-            W = np.diag([0.5, 0.5, 1, 1, 1])
+            W = np.diag([0.5, 0.1, 1, 1, 1])
 
             Ji_bar_DLS = DLS(Ji_bar, 0.1, W)   # W=np.array([[1,0,0], [0,1,0], [0,0,1]])
         

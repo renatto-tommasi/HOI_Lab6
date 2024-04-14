@@ -153,25 +153,5 @@ def rotation_z(yaw):
                      [0,0,1,0],
                      [0,0,0,1]])
 
-def wrap_angle(angle):
-    return (angle + ( 2.0 * np.pi * np.floor( ( np.pi - angle ) / ( 2.0 * np.pi ) ) ) )
 
-
-def move_to_goal(rot_for, distance, err_yaw):
-    v = 0
-    w = 0
-    Kv = 0.4
-    Kw = 0.9
-    abs_err_yaw = np.abs(err_yaw)
-    if rot_for[0] and abs_err_yaw > 0.1:
-        w = Kw * abs_err_yaw
-        if err_yaw > 0:
-            w = -w
-
-
-    if rot_for[1] or abs_err_yaw < 0.1:
-        v = Kv * distance
-        
-
-    return np.array([w ,v]).reshape(-1,1)
              
