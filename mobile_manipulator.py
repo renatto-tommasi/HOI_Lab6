@@ -17,7 +17,7 @@ robot = MobileManipulator(d, theta, a, alpha, revolute)
 tasks = [ 
         #   JointLimit("Joint Limit", desired=None, joint=3, qmin=-np.pi/8, qmax=np.pi/8, thresholds=np.array([np.pi/36, np.pi/72])),
         #   Position2D("End-effector position", np.array([-0.5, 1.5]).reshape(2,1))
-            Configuration2D("End-effector Configuration", np.array([-1, -1.0, 0]))
+            Configuration2D("End-effector Configuration", np.array([-1, 0, 0]))
         ] 
 
 # Retrieve Position2D index from tasks list
