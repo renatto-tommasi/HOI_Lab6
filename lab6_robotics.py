@@ -160,14 +160,18 @@ def wrap_angle(angle):
 def move_to_goal(rot_for, distance, err_yaw):
     v = 0
     w = 0
-    Kv = 0.5
-    Kw = 0.8
-    if rot_for[0] and err_yaw > 0.1:
-        w = Kw * err_yaw
+    Kv = 0.4
+    Kw = 0.9
+    abs_err_yaw = np.abs(err_yaw)
+    if rot_for[0] and abs_err_yaw > 0.1:
+        w = Kw * abs_err_yaw
+        if err_yaw > 0:
+            w = -w
 
 
-    if rot_for[1] or err_yaw < 0.1:
+    if rot_for[1] or abs_err_yaw < 0.1:
         v = Kv * distance
+        
 
     return np.array([w ,v]).reshape(-1,1)
              

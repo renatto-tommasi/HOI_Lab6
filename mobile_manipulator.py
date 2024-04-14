@@ -17,7 +17,7 @@ robot = MobileManipulator(d, theta, a, alpha, revolute)
 tasks = [ 
         #   JointLimit("Joint Limit", desired=None, joint=3, qmin=-np.pi/8, qmax=np.pi/8, thresholds=np.array([np.pi/36, np.pi/72])),
         #   Position2D("End-effector position", np.array([-0.5, 1.5]).reshape(2,1))
-          Configuration2D("End-effector Configuration", np.array([0.0, 2.0, np.pi/2]))
+          Configuration2D("End-effector Configuration", np.array([-4, -2.0, 0]))
         ] 
 
 # Retrieve Position2D index from tasks list
@@ -141,7 +141,7 @@ def store_vel(dq, vel_evo):
 POINTS = [[-4.5,4.5],
           [-3,2],
           [3,-2],
-          [-5,-2]]
+          [-4,-2]]
 COUNTER = 0
 
 # Simulation initialization
@@ -206,11 +206,14 @@ def simulate(t):
 
         err_yaw = wrap_angle(err_yaw)
 
-        rot_for = [False, True]         # Rotate First, Forward First
-        if distance > 1.5:
+        rot_for = [True, True]         # Rotate First, Forward First
+        if distance > 3 and not rot_for[0] and rot_for[1]:
             print("Going To Goal")
-            dq[:2] = move_to_goal(rot_for, distance, np.abs(err_yaw[0]))
+            dq[:2] = move_to_goal([True, False], distance, err_yaw[0])
             break 
+        elif distance > 1:
+            dq[:2] = move_to_goal(rot_for, distance, err_yaw[0])
+            break
 
 
 
@@ -222,7 +225,7 @@ def simulate(t):
             
             # Inverse Jacobians (DLS and pseudoinverse)
 
-            W = np.diag([0.1, 0.1, 1, 1, 1])
+            W = np.diag([0.5, 0.5, 1, 1, 1])
 
             Ji_bar_DLS = DLS(Ji_bar, 0.1, W)   # W=np.array([[1,0,0], [0,1,0], [0,0,1]])
         
