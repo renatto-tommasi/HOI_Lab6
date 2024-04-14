@@ -95,7 +95,21 @@ def simulate(t):
     
     for task in tasks:
         # Update task state
-        task.update(robot)
+        task.update(robot)  
+        err_x=task.getDesired()[0]-robot.getBasePose()[0]
+        err_y=task.getDesired()[1]-robot.getBasePose()[1]
+        err_yaw=robot.getBasePose()[2]-np.arctan2(err_y,err_x)
+        distance=np.linalg.norm(err_x-err_y)
+
+        err_yaw = wrap_angle(err_yaw)
+
+        rot_for = [True, False]         # Rotate First, Forward First
+        if distance > 1.5:
+            print("Going To Goal")
+            dq[:2] = move_to_goal(rot_for, distance, np.abs(err_yaw[0]))
+            break 
+
+
 
         # Identify dimension of error
         if isinstance(task,JointPosition) is True:
@@ -114,10 +128,16 @@ def simulate(t):
             errors[task.name] = np.concatenate((errors[task.name], np.array([err])))
 
         if task.active != 0:
+            print("Doing Task")
             Ji_bar = task.getJacobian() @ Pi_1  # Compute augmented Jacobian
             
             # Inverse Jacobians (DLS and pseudoinverse)
-            Ji_bar_DLS = DLS(Ji_bar, 0.1, np.diag([0.5, 0.1, 1, 1, 1]))   # W=np.array([[1,0,0], [0,1,0], [0,0,1]])
+
+            W = np.diag([1, 0.01, 1, 1, 1])
+            print(task.getError()[2])
+
+            Ji_bar_DLS = DLS(Ji_bar, 0.1, W)   # W=np.array([[1,0,0], [0,1,0], [0,0,1]])
+        
             Ji_bar_pinv = np.linalg.pinv(Ji_bar)
 
             dq = dqi_1 + (Ji_bar_DLS @ (task.active * task.getError() - (task.getJacobian() @ dqi_1)))  # Accumulate velocity
@@ -128,7 +148,18 @@ def simulate(t):
 
         Pi_1 = Pi
         dqi_1 = dq
-    ###
+    # ###
+    #     print(f"Robot Pose: {robot.getBasePose()}")
+    #     print(f"Desired: {task.getDesired()}")
+    #     print(f"Error: {task.getError()}")
+
+    #     err_x=task.getDesired()[0]-robot.getBasePose()[0]
+    #     err_y=task.getDesired()[1]-robot.getBasePose()[1]
+    #     err_yaw=robot.getBasePose()[2]-np.arctan2(err_y,err_x)
+
+    #     if err_yaw > 0.001:
+    #         dq[:2] = np.array([1,0]).reshape(-1,1)
+    #         print(f"Heading Error: {err_yaw}")
 
     # Update robot
     robot.update(dq, dt)
