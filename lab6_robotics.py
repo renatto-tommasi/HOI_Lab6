@@ -15,12 +15,13 @@ class MobileManipulator:
     revolute (list of Bool): list of flags specifying if the corresponding joint is a revolute joint
     """
 
-    def __init__(self, d, theta, a, alpha, revolute):
+    def __init__(self, d, theta, a, alpha, revolute, priority="R"):
         self.d = d
         self.theta = theta
         self.a = a
         self.alpha = alpha
         self.revolute = revolute
+        self.priority = priority
 
         # List of joint types extended with base joints
         self.revoluteExt = [True, False] + self.revolute
@@ -45,7 +46,7 @@ class MobileManipulator:
         dt (double): sampling time
     """
 
-    def update(self, dQ, dt, priority="R"):
+    def update(self, dQ, dt):
         # Update manipulator
         self.q += dQ[2:, 0].reshape(-1, 1) * dt
         for i in range(len(self.revolute)):
@@ -61,17 +62,17 @@ class MobileManipulator:
         x_1 = self.eta[0, 0]
         y_1 = self.eta[1, 0]
         yaw_1 = self.eta[2, 0]
-        if priority == "R":
+        if self.priority == "R":
             self.eta[2,0] = yaw_1 + theta
             self.eta[0,0] = x_1 + d*np.cos(self.eta[2,0])
             self.eta[1,0] = y_1 + d*np.sin(self.eta[2,0])
 
-        elif priority == "T":
+        elif self.priority == "T":
             self.eta[0,0] = x_1 + d*np.cos(self.eta[2,0])
             self.eta[1,0] = y_1 + d*np.sin(self.eta[2,0])
             self.eta[2,0] = yaw_1 + theta
 
-        elif priority == "RT":
+        elif self.priority == "RT":
             arc_radius = dQ[1,0]/dQ[0,0]
 
             self.eta[0,0] = x_1 + arc_radius*(np.sin(yaw_1 + theta)-np.sin(yaw_1))
